@@ -13,13 +13,26 @@ QUEUE_LENGTH = 10
 def server(server_port):
     """TODO: Listen on socket and print received message to sys.stdout"""
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind(('127.0.0.1', server_port))
+    try:
+        s.bind(('127.0.0.1', server_port))
+    except socket.error as e:
+        print('socket error: {}'.format(e.errno))
+        sys.exit(1)
     s.listen(QUEUE_LENGTH)
-    conn, addr = s.accept()
-    data = conn.recv(RECV_BUFFER_SIZE)
-    sys.stdout.write(data)
-    sys.stdout.flush()
-    conn.close()
+    try:
+        while True:
+            try:
+                conn, addr = s.accept()
+            except socket.error:
+                print('can not connect to a client')
+                continue
+            data = conn.recv(RECV_BUFFER_SIZE)
+            sys.stdout.write(data)
+            sys.stdout.flush()
+            conn.close()
+    except KeyboardInterrupt:
+        s.close()
+        sys.exit(0)
 
 def main():
     """Parse command-line argument and call server function """
@@ -30,3 +43,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
