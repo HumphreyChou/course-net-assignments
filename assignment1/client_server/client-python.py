@@ -19,7 +19,6 @@ def client(server_ip, server_port):
         s.close()
         sys.exit(1)
     msg = sys.stdin.read(SEND_BUFFER_SIZE)
-    # s.sendall("Hello, world!\n")
     while msg:
         try:
             s.sendall(msg)

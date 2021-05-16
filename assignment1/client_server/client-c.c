@@ -52,8 +52,21 @@ int client(char *server_ip, char *server_port) {
   }
 
   // send data
-  char buffer[SEND_BUFFER_SIZE] = "Hello, world!\n";
-  send(sock, buffer, strlen(buffer), 0);
+  char buffer[SEND_BUFFER_SIZE];
+  int n;
+  while((n = read(STDIN_FILENO, buffer, SEND_BUFFER_SIZE)) > 0) {
+    int n_sent = 0;
+    while(n_sent < n) {
+      int res = send(sock, buffer + n_sent, n - n_sent, 0);
+      if(res < 0) {
+        // send failed, probably blocked by other clients
+        // just re-send and DO NOT exit
+        res = 0; 
+      } 
+      n_sent += res;
+    }
+  }
+
 
   // close socket
   close(sock);

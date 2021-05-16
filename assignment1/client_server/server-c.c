@@ -4,16 +4,15 @@
  * JHED ID:
  *****************************************************************************/
 
+#include <errno.h>
+#include <netdb.h>
+#include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <errno.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <errno.h>
+#include <unistd.h>
 
 #define QUEUE_LENGTH 10
 #define RECV_BUFFER_SIZE 2048
@@ -22,12 +21,11 @@
  * Open socket and wait for client to connect
  * Print received message to stdout
  * Return 0 on success, non-zero on failure
-*/
+ */
 int server(char *server_port) {
   // create socket file descriptor
   int server_fd;
-  if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
-  {
+  if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
     perror("socket failed");
     exit(EXIT_FAILURE);
   }
@@ -36,8 +34,8 @@ int server(char *server_port) {
   // forcefully attach socket to the port
   struct sockaddr_in address;
   int opt = 1;
-  if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)))
-  {
+  if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt,
+                 sizeof(opt))) {
     perror("setsockopt failed");
     exit(EXIT_FAILURE);
   }
@@ -46,15 +44,13 @@ int server(char *server_port) {
   address.sin_port = htons(atoi(server_port));
 
   // bind socket to address
-  if (bind(server_fd, (struct sockaddr *)&address, sizeof(address))<0)
-  {
+  if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
     perror("bind failed");
     exit(EXIT_FAILURE);
   }
 
   // listen to incoming connections
-  if (listen(server_fd, 1) < 0)
-  {
+  if (listen(server_fd, QUEUE_LENGTH) < 0) {
     perror("listen failed");
     exit(EXIT_FAILURE);
   }
@@ -62,17 +58,27 @@ int server(char *server_port) {
   // accept a connection
   int sock;
   int addrlen = sizeof(address);
-  if ((sock = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen))<0)
-  {
-    perror("accept failed");
-    exit(EXIT_FAILURE);
-  }
+  while (1) {
+    if ((sock = accept(server_fd, (struct sockaddr *)&address,
+                       (socklen_t *)&addrlen)) < 0) {
+      // perror("accept failed");
+      // exit(EXIT_FAILURE);
+      fprintf(stderr, "accept failed");
+      continue;
+    }
 
-  // receive message
-  char buffer[RECV_BUFFER_SIZE];
-  int recv_bytes = recv(sock, buffer, RECV_BUFFER_SIZE, 0);
-  fwrite(buffer, recv_bytes, 1, stdout);
-  fflush(stdout);
+    // receive message
+    char buffer[RECV_BUFFER_SIZE];
+    int recv_bytes = 0;
+    while ((recv_bytes = recv(sock, buffer, RECV_BUFFER_SIZE, 0)) != 0) {
+      if (recv_bytes < 0) {
+        perror("recv failed");
+        exit(EXIT_FAILURE);
+      }
+      fwrite(buffer, recv_bytes, 1, stdout);
+      fflush(stdout);
+    }
+  }
 
   // close socket
   close(sock);
@@ -83,7 +89,7 @@ int server(char *server_port) {
 /*
  * main():
  * Parse command-line arguments and call server function
-*/
+ */
 int main(int argc, char **argv) {
   char *server_port;
 

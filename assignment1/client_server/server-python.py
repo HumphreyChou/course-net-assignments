@@ -16,7 +16,7 @@ def server(server_port):
     try:
         s.bind(('127.0.0.1', server_port))
     except socket.error as e:
-        print('socket error: {}'.format(e.errno))
+        print('socket bind error: {}'.format(e.errno))
         sys.exit(1)
     s.listen(QUEUE_LENGTH)
     try:
@@ -27,11 +27,14 @@ def server(server_port):
                 print('can not connect to a client')
                 continue
             data = conn.recv(RECV_BUFFER_SIZE)
-            sys.stdout.write(data)
-            sys.stdout.flush()
+            while data:
+                sys.stdout.write(data)
+                sys.stdout.flush()
+                data = conn.recv(RECV_BUFFER_SIZE)
             conn.close()
-    except KeyboardInterrupt:
+    except Exception:
         s.close()
+        print('Terminated by external exception')
         sys.exit(0)
 
 def main():
