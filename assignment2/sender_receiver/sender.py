@@ -4,7 +4,6 @@
 # JHED ID:
 ###############################################################################
 
-from typing import TextIO
 from assignment2.sender_receiver.util import PacketHeader, compute_checksum
 import sys
 import socket
@@ -115,12 +114,12 @@ def sender(receiver_ip, receiver_port, window_size):
     while not connect(True, s, 0, receiver_ip, receiver_port):
         continue # Try to connect to the receiver 
 
-    logging.info('Successfully connect to the receiver')
+    logging.info('SEND: successfully connect to the receiver')
 
     seq = [] # sequence to be sent
     ack_seq = {0} # received ACK numbers
     forward_window(seq, window_size, True) # fill the sequence with window size
-    logging.info('initial sending window filled')
+    logging.info('SEND: initial sending window filled')
 
     # Send all data
 
@@ -153,6 +152,8 @@ def sender(receiver_ip, receiver_port, window_size):
     # Terminate connection
     while not connect(False, s, last_ack_num + 1, receiver_ip, receiver_port):
         continue
+
+    logging.info('SEND: connection closed')
 
     s.close()
 
