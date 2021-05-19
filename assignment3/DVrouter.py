@@ -24,17 +24,19 @@ class DVrouter(Router):
         self.dis_vec = defaultdict(lambda: INF)
         self.dis_vec[self.addr] = 0
         self.forward_table = defaultdict(lambda: None)
-        self.neigbours = defaultdict(lambda: None)
+        self.ports = defaultdict(lambda: (None, INF))
 
     def broadcastDisVec(self, table):
-        for neighbour in self.neigbours.keys():
+        for port, (neighbour, cost) in self.ports.items():
+            if neighbour == None:
+                continue
             if neighbour in table:
                 dis_vec = self.dis_vec.copy()
                 dis_vec[table[neighbour]] = INF
                 packet = Packet(kind=Packet.ROUTING, srcAddr=self.addr, dstAddr=neighbour, content=dumps(dis_vec))
             else:
                 packet = Packet(kind=Packet.ROUTING, srcAddr=self.addr, dstAddr=neighbour, content=dumps(self.dis_vec))
-            self.send(self.neigbours[neighbour], packet)
+            self.send(port, packet)
 
 
     def handlePacket(self, port, packet):
@@ -56,10 +58,10 @@ class DVrouter(Router):
             neighbour_dis_vec = loads(packet.content)
             poisoned_rev_table = {}
             for addr, dis in neighbour_dis_vec.items():
-                new_dis = self.dis_vec[neighbour] + dis
+                new_dis = self.ports[port][1] + dis
                 if self.dis_vec[addr] > new_dis:
                     self.dis_vec[addr] = new_dis
-                    self.forward_table[addr] = self.forward_table[neighbour]
+                    self.forward_table[addr] = port
                     poisoned_rev_table[neighbour] = addr
             if poisoned_rev_table:
                 self.broadcastDisVec(poisoned_rev_table)
@@ -70,7 +72,7 @@ class DVrouter(Router):
         # update the distance vector of this router
         # update the forwarding table
         # broadcast the distance vector of this router to neighbors
-        self.neigbours[endpoint] = port
+        self.ports[port] = (endpoint, cost)
         if self.dis_vec[endpoint] > cost:
             self.dis_vec[endpoint] = cost
             self.forward_table[endpoint] = port
@@ -82,9 +84,7 @@ class DVrouter(Router):
         # update the distance vector of this router
         # update the forwarding table
         # broadcast the distance vector of this router to neighbors
-        for neighbour, port_num in self.neigbours.items():
-            if port_num == port:
-                self.neigbours[neighbour] = None
+        self.ports[port] = (None, INF)
         for addr, port_num in self.forward_table.items():
             if port_num == port:
                 self.forward_table[addr] = None
